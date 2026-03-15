@@ -1,18 +1,23 @@
 import os
-from tools import registry
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from anthropic import AsyncAnthropic
-from dotenv import load_dotenv
-from fastapi.responses import StreamingResponse
 import json
 import asyncio
 import uvicorn
 import time
+from tools import registry
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from anthropic import AsyncAnthropic
+from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
+from database import engine, Base, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+import models
+
 
 load_dotenv()
 
@@ -20,15 +25,26 @@ CURRENT_MODEL = "claude-sonnet-4-6"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY not found")
+    # --- Startup Logic ---
+    print("🚀 Starting API Gateway...")
     
-    app.state.anthropic_client = AsyncAnthropic(api_key=api_key)
-    yield
+    # Initialize the Anthropic Client
+    app.state.anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    
+    # Create Database Tables (if they don't exist)
+    async with engine.begin() as conn:
+        print("📦 Ensuring database tables exist...")
+        await conn.run_sync(Base.metadata.create_all)
+        
+    yield # This is where the application runs
+    
+    # --- Shutdown Logic ---
+    print("🛑 Shutting down API Gateway...")
     await app.state.anthropic_client.close()
+    await engine.dispose()
 
-app = FastAPI(title="Anthropic Product Sprint - Gateway", lifespan=lifespan)
+# Now define the app using the lifespan manager
+app = FastAPI(lifespan=lifespan)
 
 class Message(BaseModel):
     role: str = Field(..., pattern="^(user|assistant)$")
