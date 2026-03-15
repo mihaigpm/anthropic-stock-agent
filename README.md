@@ -1,3 +1,31 @@
+# Anthropic AI Gateway & Agent UI for Stock Market
+
+A full-stack, containerized AI application demonstrating advanced LLM integration, agentic tool use (function calling), and a production-ready UI. Built as part of a product engineering sprint.
+
+## 🚀 Key Features
+
+* **Agentic Tool Use:** Implements a multi-turn, stateful loop using Claude 4.6. The model dynamically decides when to defer to local Python tools for real-time data.
+* **Scalable Plugin Architecture:** Uses an Abstract Base Class (`BaseTool`) and a Service Locator pattern (`ToolRegistry`) to decouple tool execution from the core FastAPI routing.
+* **Real-Time Data Integration:** Includes a `StockPriceTool` that fetches live market data via `yfinance` and feeds it back to the LLM for synthesis.
+* **Rich UI Rendering:** A React frontend styled with Tailwind CSS, featuring full Markdown parsing, GitHub Flavored Markdown (tables), and a developer-focused dark-mode input interface.
+* **Production Infrastructure:** Fully containerized using Docker and Docker Compose, ensuring environment parity and rapid deployment.
+
+## 🛠️ Tech Stack
+
+**Backend:**
+* Python 3.11
+* FastAPI & Uvicorn (Gateway API)
+* Anthropic Python SDK
+* yfinance (External Data)
+
+**Frontend:**
+* React (Vite)
+* Tailwind CSS & `@tailwindcss/typography`
+* `react-markdown` & `remark-gfm`
+
+**Infrastructure:**
+* Docker & Docker Compose
+
 ## 📂 Architecture
 
 ```text
