@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
+import json
+import asyncio
 import uvicorn
 
 load_dotenv()
@@ -50,6 +53,31 @@ async def chat_endpoint(request: ChatRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/v1/chat/stream")
+async def chat_stream(request: ChatRequest):
+    # The event generator handles the persistent connection
+    async def event_generator():
+        try:
+            # In 2026, the .stream() helper is highly optimized for Claude 4.6
+            async with app.state.anthropic_client.messages.stream(
+                model=request.model,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                messages=[msg.model_dump() for msg in request.messages]
+            ) as stream:
+                # Loop through the stream as tokens are generated
+                async for text in stream.text_stream:
+                    # SSE standard format: "data: <JSON>\n\n"
+                    # Sending as JSON allows the client to parse metadata easily
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+                    
+                # Send a final signal so the client knows to close the connection
+                yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
     
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
