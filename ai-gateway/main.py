@@ -1,4 +1,5 @@
 import os
+from tools import registry
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,23 +41,43 @@ class ChatRequest(BaseModel):
     max_tokens: Optional[int] = 4096
     temperature: float = Field(default=0.7, ge=0, le=1)
 
-@app.post("/v1/chat")
-async def chat_endpoint(request: ChatRequest):
-    try:
-        response = await app.state.anthropic_client.messages.create(
+from tools.registry import registry
+
+@app.post("/v1/chat/agent")
+async def agent_endpoint(request: ChatRequest):
+    # 1. Provide all registered tool definitions to Claude
+    response = await app.state.anthropic_client.messages.create(
+        model=request.model,
+        max_tokens=2048,
+        tools=registry.get_definitions(),
+        messages=[msg.model_dump() for msg in request.messages]
+    )
+
+    if response.stop_reason == "tool_use":
+        # Handle multiple tool calls
+        tool_results = []
+        for block in response.content:
+            if block.type == "tool_use":
+                result = await registry.call_tool(block.name, block.input)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": str(result)
+                })
+
+        # Final pass: Give the tool data back to Claude
+        final_response = await app.state.anthropic_client.messages.create(
             model=request.model,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            messages=[msg.model_dump() for msg in request.messages]
+            max_tokens=2048,
+            messages=[
+                *[msg.model_dump() for msg in request.messages],
+                {"role": "assistant", "content": response.content},
+                {"role": "user", "content": tool_results}
+            ]
         )
-        
-        return {
-            "id": response.id,
-            "content": response.content[0].text,
-            "usage": response.usage
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"content": final_response.content[0].text}
+
+    return {"content": response.content[0].text}
     
 @app.post("/v1/chat/stream")
 async def chat_stream(request: ChatRequest):
