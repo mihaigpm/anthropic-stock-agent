@@ -61,7 +61,8 @@ async def chat_stream(request: ChatRequest):
     start_time = time.time()
     # The event generator handles the persistent connection
     async def event_generator():
-        first_token_sent = False
+        start_time = asyncio.get_event_loop().time() # Use monotonic time
+        first_token_received = False
         try:
             async with app.state.anthropic_client.messages.stream(
                 model=request.model,
@@ -71,10 +72,11 @@ async def chat_stream(request: ChatRequest):
             ) as stream:
                 # Loop through the stream as tokens are generated
                 async for text in stream.text_stream:
-                    if not first_token_sent:
-                        ttft = time.time() - start_time
-                        print(f"METRIC: Time to First Token (TTFT): {ttft:.4f}s")
-                        first_token_sent = True
+                    if not first_token_received:
+                        end_time = asyncio.get_event_loop().time()
+                        ttft = end_time - start_time
+                        print(f"METRIC | TTFT: {ttft:.4f}s | Model: {request.model}")
+                        first_token_received = True
                     # SSE standard format: "data: <JSON>\n\n"
                     # Sending as JSON allows the client to parse metadata easily
                     yield f"data: {json.dumps({'text': text})}\n\n"
