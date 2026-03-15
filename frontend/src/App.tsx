@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { useClaude } from './useClaude';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function App() {
   const [input, setInput] = useState('');
@@ -33,7 +35,11 @@ function App() {
                 {msg.role === 'user' ? <User size={12}/> : <Bot size={12}/>}
                 {msg.role}
               </div>
-              <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-pre:p-0">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}
@@ -69,4 +75,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
