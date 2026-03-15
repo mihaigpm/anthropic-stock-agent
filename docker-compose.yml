@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # 1. The FastAPI Backend
+  api:
+    build: 
+      context: ./ai-gateway
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai-gateway/.env
+    volumes:
+      - ./ai-gateway:/app # Hot-reloading for local dev
+
+  # 2. The React Frontend
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
