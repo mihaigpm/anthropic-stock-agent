@@ -19,7 +19,7 @@ function App() {
       {/* Header */}
       <header className="p-4 border-b bg-white flex items-center gap-2 shadow-sm">
         <Bot className="text-orange-600" />
-        <h1 className="font-semibold text-lg">Claude 4.6 Prototype</h1>
+        <h1 className="font-semibold text-lg text-xl text-slate-900 tracking-tight">Mihai Stock Agent</h1>
       </header>
 
       {/* Chat Area */}
@@ -60,7 +60,7 @@ function App() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
             placeholder="Send a message to Claude..."
-            className="flex-1 p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none h-12"
+            className="flex-1 p-3 bg-slate-800 text-white placeholder-slate-400 border border-slate-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none h-12"
           />
           <button 
             onClick={handleSend}
